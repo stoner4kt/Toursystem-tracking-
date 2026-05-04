@@ -167,8 +167,12 @@ This is a one-time setup per WhatsApp number. The admin's number needs to be act
 
 4. Set the secrets for the Edge Function:
    ```bash
+   # Option A: single admin recipient (legacy)
    supabase secrets set CALLMEBOT_PHONE=+27821234567
    supabase secrets set CALLMEBOT_APIKEY=123456
+
+   # Option B: multiple admin recipients (recommended)
+   supabase secrets set CALLMEBOT_RECIPIENTS='[{"phone":"+27821234567","apikey":"123456"},{"phone":"+27829876543","apikey":"456789"}]'
    ```
 
 5. Deploy the function:
