@@ -16,6 +16,24 @@ Everything you need to go from zero to a live, production-ready fleet management
 
 ---
 
+## Credential Checklist (Get this first)
+
+Before setup, collect these values:
+
+| Key / Secret | Where to get it | Where to set it |
+|---|---|---|
+| `SUPABASE_URL` | Supabase → Settings → API → Project URL | `config.js` |
+| `SUPABASE_ANON_KEY` | Supabase → Settings → API → anon public key | `config.js` |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary Dashboard → Cloud name | `config.js` |
+| `CLOUDINARY_UPLOAD_PRESET` | Cloudinary → Settings → Upload → Upload Presets | `config.js` |
+| `FAULT_ALERT_FUNCTION_URL` | Supabase → Edge Functions → `fault-alert` → Invoke URL | `config.js` |
+| `CALLMEBOT_PHONE` | Your activated WhatsApp number | Supabase secret (CLI) |
+| `CALLMEBOT_APIKEY` | CallMeBot reply after activation message | Supabase secret (CLI) |
+
+> `SUPABASE_ANON_KEY` is safe for frontend use. Never expose Supabase Service Role keys in frontend code.
+
+---
+
 ## STEP 1 — Supabase (Database + Auth)
 
 ### 1.1 Create a Project
@@ -356,3 +374,107 @@ transroute-pwa/
 ---
 
 *TransRoute PWA — Built for zero monthly subscriptions. All data stays in your Supabase project.*
+
+
+---
+
+## STEP 9 — Admin Operations Checklist (After Login)
+
+### 9.1 Add / Edit / Remove Vehicles
+1. Open **Fleet** tab in Admin.
+2. Click **+ Add Vehicle** to create a vehicle.
+3. Use **Edit** to update mileage/service/status.
+4. Use **Del** to remove a vehicle.
+
+### 9.2 Assign Vehicle to Driver
+1. In Fleet, click **Edit** on a vehicle.
+2. Use **Assigned Driver** dropdown.
+3. Save vehicle.
+
+### 9.3 Create / Edit Bookings
+1. Open **Calendar** tab.
+2. Click **+ New** to create booking.
+3. Click **Edit** on an existing booking to update details/status.
+
+### 9.4 Add Drivers
+1. Go to **Supabase → Authentication → Users**.
+2. Invite driver by email.
+3. Profile auto-creates in `profiles` table with default role `driver`.
+4. Driver logs in via magic link.
+
+---
+
+## STEP 10 — Security Hardening (Recommended)
+
+For production, add a small backend layer (e.g. Cloudflare Workers) for privileged actions:
+- Driver invite workflow
+- Signed media upload flow
+- Admin-only server validations
+
+Keep this rule: **No privileged secret in frontend files** (`config.js`, HTML, JS).
+
+---
+
+## STEP 11 — Cloudflare Worker + Google Sheets Logging
+
+This step adds secure server-side logging to Google Sheets for:
+- bookings (`/bookings` endpoint)
+- inspections (`/inspections` endpoint)
+
+**Architecture note:** Supabase remains the system of record (source of truth). Google Sheets is a secondary copy for audit/reporting/export only.
+
+### 11.1 Create Two Google Sheets
+1. Create sheet #1 named `TransRoute Bookings`.
+2. Create sheet #2 named `TransRoute Inspections`.
+3. In each sheet, create a tab:
+   - `Bookings`
+   - `Inspections`
+4. Copy each spreadsheet ID from the URL:
+   - `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`
+
+### 11.2 Create Google Service Account Credentials
+1. Open Google Cloud Console: https://console.cloud.google.com
+2. Create/select a project.
+3. Enable **Google Sheets API**.
+4. Go to **IAM & Admin → Service Accounts**.
+5. Create a service account (e.g. `transroute-sheets-writer`).
+6. Create JSON key for that account and download it.
+7. Copy:
+   - `client_email` → used as `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+   - `private_key` → used as `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+8. Share both spreadsheets with the service account email as **Editor**.
+
+### 11.3 Deploy Cloudflare Worker
+1. Create Cloudflare account and install Wrangler:
+   ```bash
+   npm install -g wrangler
+   wrangler login
+   ```
+2. In this repo, use `cloudflare-worker-example.js` as your Worker script.
+3. Create a Worker project and paste script.
+4. Set Worker secrets:
+   ```bash
+   wrangler secret put WORKER_SHARED_TOKEN
+   wrangler secret put GOOGLE_SERVICE_ACCOUNT_EMAIL
+   wrangler secret put GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+   wrangler secret put GSHEET_BOOKINGS_SPREADSHEET_ID
+   wrangler secret put GSHEET_INSPECTIONS_SPREADSHEET_ID
+   ```
+5. Set Worker plain vars:
+   - `GSHEET_BOOKINGS_TAB=Bookings`
+   - `GSHEET_INSPECTIONS_TAB=Inspections`
+6. Deploy worker and copy URL:
+   - `https://YOUR_WORKER.workers.dev`
+
+### 11.4 Set Frontend Config Values
+Open `config.js` and set:
+- `WORKER_BOOKINGS_WEBHOOK_URL=https://YOUR_WORKER.workers.dev/bookings`
+- `WORKER_INSPECTIONS_WEBHOOK_URL=https://YOUR_WORKER.workers.dev/inspections`
+- `WORKER_SHARED_TOKEN=...` (same as Worker secret)
+
+### 11.5 Verify End-to-End
+1. Create or edit a booking from admin screen.
+2. Submit an inspection.
+3. Confirm rows appear in both spreadsheets.
+4. If missing, check Cloudflare Worker logs and browser console.
+

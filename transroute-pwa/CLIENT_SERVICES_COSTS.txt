@@ -1,0 +1,70 @@
+TransRoute Client Service Stack (May 2026)
+==========================================
+
+This document lists the services used by TransRoute, why we use them,
+and rough monthly costs for a small-to-medium operation.
+
+IMPORTANT
+---------
+- Pricing can change at any time.
+- Confirm final numbers on each provider's pricing page before go-live.
+- Estimates below assume normal usage (not viral/high-scale traffic).
+
+1) Supabase (Database + Auth + API + Edge Functions)
+-----------------------------------------------------
+Why we use it:
+- Stores vehicles, bookings, inspections, and user profiles.
+- Handles magic-link login for admins and drivers.
+- Provides Row Level Security (RLS) for data protection.
+- Runs server-side functions (e.g. fault alert trigger).
+
+Approximate monthly cost:
+- Starter/small teams: $0 to about $25+/month
+- Growing operations: $25 to $100+/month (depending on usage/compute/storage)
+
+2) Cloudinary (Photo/Video evidence storage)
+---------------------------------------------
+Why we use it:
+- Stores uploaded inspection photos/videos.
+- Delivers media quickly with global CDN.
+- Keeps large files out of the main transactional DB.
+
+Approximate monthly cost:
+- Starter/small teams: $0 to about $99/month
+- Higher media volume: $99+/month depending on transformations and bandwidth
+
+3) Netlify (Web hosting)
+------------------------
+Why we use it:
+- Hosts the PWA (admin + driver web app).
+- Fast deploy workflow and CDN distribution.
+- HTTPS included.
+
+Approximate monthly cost:
+- Starter/small teams: $0 on free tier
+- Business use: about $19+ per member/month (plus usage if limits exceeded)
+
+4) CallMeBot (WhatsApp alert relay)
+------------------------------------
+Why we use it:
+- Sends WhatsApp notifications when critical faults are detected.
+
+Approximate monthly cost:
+- Typically free for basic usage.
+
+Optional security hardening service
+-----------------------------------
+5) Cloudflare Workers (optional, recommended for production-hardening)
+Why add it:
+- Keeps privileged secrets off the frontend.
+- Adds server-side validation for admin-only actions (e.g. invite driver).
+- Can issue signed upload requests instead of exposing direct unsigned uploads.
+
+Approximate monthly cost:
+- $0 on free tier for light traffic, then usage-based as traffic grows.
+
+Suggested budget ranges
+-----------------------
+- Lean setup (pilot): $0 to $50/month
+- Typical production (SME): $50 to $250/month
+- Heavier scale: $250+/month

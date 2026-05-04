@@ -56,3 +56,9 @@
 2. Open `index.html` and demo Calendar → Fleet → Reports.
 3. Open `inspection.html` and submit a sample inspection path.
 4. Explain offline save + later sync as resilience differentiator.
+
+
+## 8) Data Ownership (Important)
+- **Supabase is the source of truth** for operational data (vehicles, bookings, inspections, users).
+- **Google Sheets is a secondary log/export sink** for reporting/shareability and does not drive app state.
+- If Worker/Sheets is down, app should still continue operating against Supabase.

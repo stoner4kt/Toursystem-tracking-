@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.vehicles (
   status           TEXT    NOT NULL DEFAULT 'active'
                            CHECK (status IN ('active', 'maintenance', 'decommissioned')),
   notes            TEXT,
+  assigned_driver_id TEXT REFERENCES public.profiles(driver_id) ON DELETE SET NULL,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

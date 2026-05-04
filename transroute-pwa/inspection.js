@@ -295,6 +295,8 @@ document.getElementById('form-inspection')?.addEventListener('submit', async (e)
     await triggerFaultAlert({ ...payload, id: data.id });
   }
 
+  await postToWorkerWebhook(CONFIG.WORKER_INSPECTIONS_WEBHOOK_URL, data || payload);
+
   toast(
     hasCriticalFault ? '⚠ Inspection saved — fault alert sent!' : 'Inspection submitted successfully',
     hasCriticalFault ? 'warning' : 'success',
