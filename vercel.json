@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/transroute-pwa/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/transroute-pwa/$1"
+    }
+  ]
+}
