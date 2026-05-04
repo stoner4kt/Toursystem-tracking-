@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f2744">
+  <title>TransRoute — Login</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: linear-gradient(145deg,#0f2744 0%,#1a3a5c 55%,#1a4a7a 100%); }
+    .login-bg { min-height: 100dvh; display:flex; align-items:center; justify-content:center; padding:24px; }
+    .login-card { background:#fff; border-radius:18px; padding:40px 28px; width:100%; max-width:400px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+    .login-logo { font-size:2.4rem; font-weight:900; color:#0f2744; letter-spacing:-1px; margin-bottom:4px; }
+    .login-logo span { color:#f59e0b; }
+    .login-tagline { font-size:.87rem; color:#64748b; margin-bottom:32px; }
+    #msg { margin-top:12px; padding:12px 16px; border-radius:10px; font-size:.88rem; display:none; }
+    #msg.success { background:#d1fae5; color:#065f46; display:block; }
+    #msg.error   { background:#fee2e2; color:#991b1b; display:block; }
+    .powered { margin-top:28px; font-size:.74rem; color:#94a3b8; text-align:center; }
+    .btn-magic { background:#f59e0b; color:#0f2744; width:100%; padding:13px; font-size:1rem; font-weight:700; border:none; border-radius:10px; cursor:pointer; transition:.15s; }
+    .btn-magic:hover { background:#d97706; }
+    .btn-magic:active { transform:scale(.98); }
+    .btn-magic:disabled { opacity:.6; cursor:not-allowed; }
+    .form-control { width:100%; padding:12px 14px; border:1.5px solid #d1dce8; border-radius:10px; font-size:1rem; margin-top:6px; }
+    .form-control:focus { outline:none; border-color:#1a3a5c; box-shadow:0 0 0 3px rgba(26,58,92,.12); }
+  </style>
+</head>
+<body>
+  <div class="login-bg">
+    <div class="login-card">
+      <div class="login-logo">Trans<span>Route</span></div>
+      <div class="login-tagline">Fleet &amp; Inspection Management</div>
+
+      <div id="panel-login">
+        <div style="margin-bottom:20px">
+          <label for="email" style="font-size:.84rem;font-weight:600;color:#1e293b;display:block">Email Address</label>
+          <input type="email" id="email" class="form-control" placeholder="you@example.com" autocomplete="email" required>
+        </div>
+        <button class="btn-magic" id="btn-magic-link">Send Magic Link</button>
+        <div id="msg"></div>
+        <div class="powered">Secured by Supabase Auth &nbsp;·&nbsp; No password required</div>
+      </div>
+
+      <div id="panel-sent" style="display:none; text-align:center;">
+        <div style="font-size:3rem; margin-bottom:12px">📬</div>
+        <h2 style="color:#0f2744; margin-bottom:8px">Check your inbox</h2>
+        <p style="color:#64748b; font-size:.9rem; margin-bottom:20px">
+          We sent a login link to <strong id="sent-email"></strong>.<br>
+          Click it to sign in — no password needed.
+        </p>
+        <button class="btn-magic" style="background:#1a3a5c;color:#fff" onclick="document.getElementById('panel-sent').style.display='none'; document.getElementById('panel-login').style.display='block'">
+          Use a different email
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script>
+    const { createClient } = supabase;
+    const sb = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    const msg = document.getElementById('msg');
+
+    // If already logged in, redirect
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return;
+      sb.from('profiles').select('role').eq('id', session.user.id).single()
+        .then(({ data }) => {
+          window.location.href = data?.role === 'admin' ? 'index.html' : 'inspection.html';
+        });
+    });
+
+    // Handle magic link token on page load (when user clicks email link)
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const { data } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+        window.location.href = data?.role === 'admin' ? 'index.html' : 'inspection.html';
+      }
+    });
+
+    document.getElementById('btn-magic-link').addEventListener('click', async () => {
+      const email = document.getElementById('email').value.trim();
+      if (!email) { showMsg('Please enter your email address.', 'error'); return; }
+      const btn = document.getElementById('btn-magic-link');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      msg.className = ''; msg.style.display = 'none';
+
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin + '/login.html',
+        }
+      });
+
+      btn.disabled = false; btn.textContent = 'Send Magic Link';
+      if (error) { showMsg(error.message, 'error'); return; }
+
+      document.getElementById('sent-email').textContent = email;
+      document.getElementById('panel-login').style.display = 'none';
+      document.getElementById('panel-sent').style.display  = 'block';
+    });
+
+    function showMsg(text, type) {
+      msg.textContent  = text;
+      msg.className    = type;
+      msg.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f2744">
+  <title>TransRoute — Admin</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── OFFLINE BANNER ─────────────────────────────────────── -->
+<div id="offline-banner">📵 You are offline — changes will sync when reconnected</div>
+
+<!-- ── HEADER ─────────────────────────────────────────────── -->
+<header class="app-header">
+  <div class="logo">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2">
+      <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+    </svg>
+    Trans<span>Route</span>&nbsp;<span style="font-weight:400;font-size:.8rem;opacity:.6">Admin</span>
+  </div>
+  <div class="header-actions">
+    <span data-sync-wrapper style="display:none">
+      <span class="sync-count sync-badge">0</span>
+    </span>
+    <span id="admin-name" style="color:rgba(255,255,255,.7);font-size:.82rem"></span>
+    <button class="btn-icon" id="btn-signout" title="Sign out">⏻</button>
+  </div>
+</header>
+
+<!-- ── TAB NAV ──────────────────────────────────────────────── -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="calendar">📅 Calendar</button>
+  <button class="tab-btn" data-tab="fleet">🚌 Fleet</button>
+  <button class="tab-btn" data-tab="reports">📋 Reports</button>
+</nav>
+
+<!-- ── MAIN ──────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- ═══ CALENDAR TAB ═══ -->
+  <div class="tab-panel active" id="tab-calendar">
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Bookings</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-confirmed" style="color:var(--green)">—</div><div class="stat-label">Confirmed</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-pending" style="color:var(--amber)">—</div><div class="stat-label">Pending</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-invoiced" style="color:var(--navy-mid)">—</div><div class="stat-label">Invoiced</div></div>
+    </div>
+
+    <div class="card">
+      <div class="cal-nav">
+        <button class="btn btn-sm btn-outline" id="cal-prev">‹</button>
+        <h3 id="cal-month-label">—</h3>
+        <button class="btn btn-sm btn-outline" id="cal-next">›</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Bookings</div>
+          <div class="card-subtitle">Click a date on the calendar to filter</div>
+        </div>
+        <button class="btn btn-amber btn-sm" id="btn-add-booking">+ New</button>
+      </div>
+      <div id="day-bookings">
+        <p style="color:var(--text-muted);font-size:.88rem">Select a date above to view bookings.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FLEET TAB ═══ -->
+  <div class="tab-panel" id="tab-fleet">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Fleet Vehicles</div>
+        <button class="btn btn-amber btn-sm" id="btn-add-vehicle">+ Add Vehicle</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Reg No</th><th>Model</th><th>Year</th>
+              <th>Mileage</th><th>Next Service</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fleet-tbody">
+            <tr><td colspan="7"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REPORTS TAB ═══ -->
+  <div class="tab-panel" id="tab-reports">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Inspection Reports</div>
+          <div class="card-subtitle">Last 50 inspections</div>
+        </div>
+      </div>
+      <div id="reports-list"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODALS
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- Booking Modal -->
+<div class="modal-overlay" id="modal-booking">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-booking-title">New Booking</span>
+      <button class="modal-close" onclick="closeModal('modal-booking')">✕</button>
+    </div>
+    <form id="form-booking">
+      <input type="hidden" id="booking-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Invoice No <span class="required">*</span></label>
+          <input type="text" id="booking-invoice" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Client Name <span class="required">*</span></label>
+          <input type="text" id="booking-client" class="form-control" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Route</label>
+          <input type="text" id="booking-route" class="form-control" placeholder="e.g. Cape Town → George">
+        </div>
+        <div class="form-group">
+          <label>Tour Date <span class="required">*</span></label>
+          <input type="date" id="booking-date" class="form-control" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Passengers</label>
+          <input type="number" id="booking-pax" class="form-control" min="1" value="1">
+        </div>
+        <div class="form-group">
+          <label>Amount (R)</label>
+          <input type="number" id="booking-amount" class="form-control" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="booking-status" class="form-control">
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="invoiced">Invoiced</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="booking-notes" class="form-control" rows="2"></textarea>
+      </div>
+      <button type="submit" class="btn btn-amber btn-full">Save Booking</button>
+    </form>
+  </div>
+</div>
+
+<!-- Vehicle Modal -->
+<div class="modal-overlay" id="modal-vehicle">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-vehicle-title">Add Vehicle</span>
+      <button class="modal-close" onclick="closeModal('modal-vehicle')">✕</button>
+    </div>
+    <form id="form-vehicle">
+      <input type="hidden" id="vehicle-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Registration No <span class="required">*</span></label>
+          <input type="text" id="vehicle-reg" class="form-control" required placeholder="CA 123 456">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="vehicle-status" class="form-control">
+            <option value="active">Active</option>
+            <option value="maintenance">In Maintenance</option>
+            <option value="decommissioned">Decommissioned</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Make</label>
+          <input type="text" id="vehicle-make" class="form-control" placeholder="Toyota">
+        </div>
+        <div class="form-group">
+          <label>Model <span class="required">*</span></label>
+          <input type="text" id="vehicle-model" class="form-control" required placeholder="Quantum 2.5 TDi">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Year</label>
+          <input type="number" id="vehicle-year" class="form-control" min="1990" max="2030" placeholder="2022">
+        </div>
+        <div class="form-group">
+          <label>Current Mileage (km)</label>
+          <input type="number" id="vehicle-mileage" class="form-control" min="0" placeholder="85000">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Next Service Due (km)</label>
+        <input type="number" id="vehicle-service-km" class="form-control" min="0" placeholder="90000">
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="vehicle-notes" class="form-control" rows="2"></textarea>
+      </div>
+      <button type="submit" class="btn btn-amber btn-full">Save Vehicle</button>
+    </form>
+  </div>
+</div>
+
+<!-- Report Detail Modal -->
+<div class="modal-overlay" id="modal-report-detail">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Inspection Report</span>
+      <button class="modal-close" onclick="closeModal('modal-report-detail')">✕</button>
+    </div>
+    <input type="hidden" id="report-detail-id">
+    <div id="report-detail-body"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ── SCRIPTS ──────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
