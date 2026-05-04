@@ -21,6 +21,25 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
 // ────────────────────────────────────────────────────────────
 let calDate     = new Date();
 let allBookings = [];
+let driverOptions = [];
+
+async function loadDriverOptions() {
+  const { data } = await sb.from('profiles')
+    .select('driver_id, name, is_active, role')
+    .eq('role', 'driver')
+    .eq('is_active', true)
+    .order('name');
+  driverOptions = data || [];
+  const sel = document.getElementById('vehicle-assigned-driver');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Unassigned —</option>';
+  driverOptions.forEach((d) => {
+    const opt = document.createElement('option');
+    opt.value = d.driver_id;
+    opt.textContent = `${d.name} (${d.driver_id})`;
+    sel.appendChild(opt);
+  });
+}
 
 async function renderCalendar() {
   const year  = calDate.getFullYear();
@@ -169,13 +188,14 @@ document.getElementById('form-booking')?.addEventListener('submit', async (e) =>
   const submitBtn = e.target.querySelector('[type="submit"]');
   submitBtn.disabled = true; submitBtn.textContent = 'Saving…';
 
-  const { error } = id
-    ? await sb.from('bookings').update(payload).eq('id', id)
-    : await sb.from('bookings').insert(payload);
+  const { data: bookingData, error } = id
+    ? await sb.from('bookings').update(payload).eq('id', id).select().single()
+    : await sb.from('bookings').insert(payload).select().single();
 
   submitBtn.disabled = false; submitBtn.textContent = 'Save Booking';
   if (error) { toast('Error: ' + error.message, 'error'); return; }
   toast(id ? 'Booking updated' : 'Booking added', 'success');
+  await postToWorkerWebhook(CONFIG.WORKER_BOOKINGS_WEBHOOK_URL, bookingData || payload);
   closeModal('modal-booking');
   renderCalendar();
 });
@@ -185,11 +205,12 @@ document.getElementById('form-booking')?.addEventListener('submit', async (e) =>
 // ────────────────────────────────────────────────────────────
 async function loadFleet() {
   const tbody = document.getElementById('fleet-tbody');
-  tbody.innerHTML = `<tr><td colspan="7"><div class="spinner"></div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="8"><div class="spinner"></div></td></tr>`;
   const { data, error } = await sb.from('vehicles').select('*').order('registration_no');
-  if (error) { tbody.innerHTML = `<tr><td colspan="7">Error loading fleet</td></tr>`; return; }
+  if (!driverOptions.length) await loadDriverOptions();
+  if (error) { tbody.innerHTML = `<tr><td colspan="8">Error loading fleet</td></tr>`; return; }
   if (!data.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🚌</div><p>No vehicles added yet.</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🚌</div><p>No vehicles added yet.</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = data.map((v) => {
@@ -212,6 +233,7 @@ async function loadFleet() {
             ${kmLeft !== null ? (kmLeft > 0 ? formatMileage(kmLeft) + ' left' : '<span style="color:var(--red)">Overdue</span>') : '—'}
           </div>
         </td>
+        <td>${v.assigned_driver_id ? (driverOptions.find(d => d.driver_id === v.assigned_driver_id)?.name || v.assigned_driver_id) : '—'}</td>
         <td>${statusBadge(v.status)}</td>
         <td>
           <div style="display:flex;gap:6px">
@@ -223,7 +245,8 @@ async function loadFleet() {
   }).join('');
 }
 
-document.getElementById('btn-add-vehicle')?.addEventListener('click', () => {
+document.getElementById('btn-add-vehicle')?.addEventListener('click', async () => {
+  await loadDriverOptions();
   resetVehicleForm();
   document.getElementById('modal-vehicle-title').textContent = 'Add Vehicle';
   openModal('modal-vehicle');
@@ -236,9 +259,11 @@ function resetVehicleForm() {
     if (el) el.value = '';
   });
   document.getElementById('vehicle-status').value = 'active';
+  document.getElementById('vehicle-assigned-driver').value = '';
 }
 
 async function openEditVehicle(id) {
+  await loadDriverOptions();
   const { data } = await sb.from('vehicles').select('*').eq('id', id).single();
   if (!data) return;
   document.getElementById('vehicle-id').value         = data.id;
@@ -250,6 +275,7 @@ async function openEditVehicle(id) {
   document.getElementById('vehicle-service-km').value = data.next_service_km || '';
   document.getElementById('vehicle-status').value     = data.status;
   document.getElementById('vehicle-notes').value      = data.notes || '';
+  document.getElementById('vehicle-assigned-driver').value = data.assigned_driver_id || '';
   document.getElementById('modal-vehicle-title').textContent = 'Edit Vehicle';
   openModal('modal-vehicle');
 }
@@ -266,6 +292,7 @@ document.getElementById('form-vehicle')?.addEventListener('submit', async (e) =>
     next_service_km: parseInt(document.getElementById('vehicle-service-km').value) || null,
     status:          document.getElementById('vehicle-status').value,
     notes:           document.getElementById('vehicle-notes').value.trim() || null,
+    assigned_driver_id: document.getElementById('vehicle-assigned-driver').value || null,
   };
   const submitBtn = e.target.querySelector('[type="submit"]');
   submitBtn.disabled = true; submitBtn.textContent = 'Saving…';
@@ -501,3 +528,6 @@ async function downloadPDF(inspectionId) {
   document.querySelector('[data-tab="calendar"]')?.click();
   updateSyncBadge();
 })();
+
+
+loadDriverOptions();

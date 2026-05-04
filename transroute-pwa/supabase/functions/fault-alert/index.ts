@@ -7,8 +7,12 @@
 //    supabase functions deploy fault-alert
 //
 //  Set secrets:
+//    # Single recipient (backward compatible):
 //    supabase secrets set CALLMEBOT_PHONE=+27821234567
 //    supabase secrets set CALLMEBOT_APIKEY=your_api_key
+//
+//    # Multi-recipient (recommended for multiple admins):
+//    supabase secrets set CALLMEBOT_RECIPIENTS='[{"phone":"+27821234567","apikey":"123456"},{"phone":"+27829876543","apikey":"456789"}]'
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
@@ -78,11 +82,33 @@ serve(async (req: Request) => {
       `Action required: Vehicle must be inspected before next trip.`
     );
 
-    // ── Send via CallMeBot ────────────────────────────────────
-    const phone   = Deno.env.get('CALLMEBOT_PHONE') ?? '';
-    const apikey  = Deno.env.get('CALLMEBOT_APIKEY') ?? '';
+    // ── Send via CallMeBot (single or multi-admin recipients) ─
+    const recipientsRaw = Deno.env.get('CALLMEBOT_RECIPIENTS') ?? '';
+    let recipients: Array<{ phone: string; apikey: string }> = [];
 
-    if (!phone || !apikey) {
+    if (recipientsRaw) {
+      try {
+        const parsed = JSON.parse(recipientsRaw);
+        if (Array.isArray(parsed)) {
+          recipients = parsed
+            .filter((r) => r?.phone && r?.apikey)
+            .map((r) => ({ phone: String(r.phone), apikey: String(r.apikey) }));
+        }
+      } catch (e) {
+        console.warn('Invalid CALLMEBOT_RECIPIENTS JSON:', e);
+      }
+    }
+
+    // Backward-compatible fallback to single-recipient secrets
+    if (recipients.length === 0) {
+      const phone = Deno.env.get('CALLMEBOT_PHONE') ?? '';
+      const apikey = Deno.env.get('CALLMEBOT_APIKEY') ?? '';
+      if (phone && apikey) {
+        recipients = [{ phone, apikey }];
+      }
+    }
+
+    if (recipients.length === 0) {
       console.warn('CallMeBot credentials not set — skipping WhatsApp alert');
       return new Response(
         JSON.stringify({ success: false, reason: 'CallMeBot not configured' }),
@@ -90,14 +116,20 @@ serve(async (req: Request) => {
       );
     }
 
-    const callMeBotUrl =
-      `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${message}&apikey=${apikey}`;
+    const results: Array<{ phone: string; ok: boolean; response: string }> = [];
 
-    const alertRes = await fetch(callMeBotUrl);
-    const alertText = await alertRes.text();
+    for (const recipient of recipients) {
+      const callMeBotUrl =
+        `https://api.callmebot.com/whatsapp.php?phone=${recipient.phone}&text=${message}&apikey=${recipient.apikey}`;
+      const alertRes = await fetch(callMeBotUrl);
+      const alertText = await alertRes.text();
+      results.push({ phone: recipient.phone, ok: alertRes.ok, response: alertText });
+    }
+
+    const anySuccess = results.some((r) => r.ok);
 
     // ── Mark Alert as Sent in DB ──────────────────────────────
-    if (alertRes.ok && inspection_id) {
+    if (anySuccess && inspection_id) {
       const adminClient = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -109,7 +141,7 @@ serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ success: alertRes.ok, callmebot_response: alertText }),
+      JSON.stringify({ success: anySuccess, recipients: results }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

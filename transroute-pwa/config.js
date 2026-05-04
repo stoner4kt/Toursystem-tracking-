@@ -22,4 +22,9 @@ const CONFIG = {
   // ── Fault Alert Edge Function ────────────────────────────
   // https://app.supabase.com → Edge Functions → fault-alert → URL
   FAULT_ALERT_FUNCTION_URL: 'https://YOUR_PROJECT_ID.supabase.co/functions/v1/fault-alert',
+
+  // ── Optional Cloudflare Worker Webhooks (Google Sheets logging) ─
+  WORKER_BOOKINGS_WEBHOOK_URL: 'https://YOUR_WORKER.workers.dev/bookings',
+  WORKER_INSPECTIONS_WEBHOOK_URL: 'https://YOUR_WORKER.workers.dev/inspections',
+  WORKER_SHARED_TOKEN: 'YOUR_WORKER_SHARED_TOKEN',
 };
