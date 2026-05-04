@@ -163,12 +163,13 @@ async function syncPendingInspections() {
         payload.media_urls = uploadedUrls;
       }
 
-      const { error } = await sb.from('inspections').insert(payload);
+      const { data: syncedData, error } = await sb.from('inspections').insert(payload).select().single();
       if (!error) {
         await markInspectionSynced(local_id);
         if (payload.has_critical_fault) {
           await triggerFaultAlert(payload);
         }
+        await postToWorkerWebhook(CONFIG.WORKER_INSPECTIONS_WEBHOOK_URL, syncedData || payload);
       }
     }
     updateSyncBadge();
@@ -286,3 +287,20 @@ document.querySelectorAll('.modal-overlay').forEach((overlay) => {
     if (e.target === overlay) overlay.classList.remove('open');
   });
 });
+
+
+async function postToWorkerWebhook(url, payload) {
+  if (!url || url.includes('YOUR_WORKER')) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CONFIG.WORKER_SHARED_TOKEN || ''}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.warn('Worker webhook failed:', err);
+  }
+}
