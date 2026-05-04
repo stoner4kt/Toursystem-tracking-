@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TransRoute — Client Demo</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background: #f1f5f9; }
+    .demo-wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 56px; }
+    .hero { background: linear-gradient(145deg,#0f2744,#1a4a7a); color:#fff; border-radius:16px; padding:24px; margin-bottom:18px; }
+    .hero h1 { margin:0 0 8px; }
+    .grid { display:grid; gap:14px; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); }
+    .step { background:#fff; border-radius:14px; padding:16px; box-shadow:0 6px 16px rgba(15,39,68,.08); }
+    .num { display:inline-flex; width:28px; height:28px; border-radius:50%; align-items:center; justify-content:center; background:#f59e0b; color:#0f2744; font-weight:800; margin-right:8px; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+    .pill { background:#e2e8f0; color:#0f2744; padding:5px 10px; border-radius:999px; font-size:.78rem; font-weight:700; }
+    .demo-note { font-size:.9rem; color:#475569; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="logo">Trans<span>Route</span>&nbsp;<span style="font-size:.8rem;opacity:.75">Demo Mode</span></div>
+  </header>
+
+  <div class="demo-wrap">
+    <section class="hero">
+      <h1>Client Demo Walkthrough</h1>
+      <p style="margin:0;opacity:.93">Use this page during presentations when live backend setup is not available. It gives you a guided story + one-click links into the real app screens.</p>
+      <div class="actions">
+        <a class="btn btn-amber" href="login.html">Open Live Login</a>
+        <a class="btn btn-outline" href="index.html">Open Admin App</a>
+        <a class="btn btn-outline" href="inspection.html">Open Driver App</a>
+      </div>
+    </section>
+
+    <div class="grid">
+      <article class="step">
+        <h3><span class="num">1</span>Admin Planning</h3>
+        <p>Show how operations create bookings, assign routes, and monitor monthly schedule from Calendar.</p>
+        <div class="pill">Calendar + Bookings</div>
+      </article>
+      <article class="step">
+        <h3><span class="num">2</span>Fleet Visibility</h3>
+        <p>Highlight fleet list, service mileage progress bars, and vehicle status for compliance visibility.</p>
+        <div class="pill">Fleet Management</div>
+      </article>
+      <article class="step">
+        <h3><span class="num">3</span>Driver Inspections</h3>
+        <p>Driver submits pre/post-trip checklist, records faults, and captures media evidence from mobile.</p>
+        <div class="pill">Checklist + Media</div>
+      </article>
+      <article class="step">
+        <h3><span class="num">4</span>Fault Escalation</h3>
+        <p>Critical faults trigger alert workflow (Supabase Edge Function → CallMeBot WhatsApp to admin).</p>
+        <div class="pill">Automated Alerts</div>
+      </article>
+      <article class="step">
+        <h3><span class="num">5</span>Offline Reliability</h3>
+        <p>Inspections are cached in IndexedDB while offline and auto-sync when connectivity is restored.</p>
+        <div class="pill">Offline-first PWA</div>
+      </article>
+      <article class="step">
+        <h3><span class="num">6</span>Reporting & Audit</h3>
+        <p>Admin reviews latest inspections, fault summaries, and media records for audit-ready reporting.</p>
+        <div class="pill">Reports</div>
+      </article>
+    </div>
+
+    <p class="demo-note">Tip: Start on this page, narrate the 6-step flow, then open the live screens using the buttons above.</p>
+  </div>
+</body>
+</html>
